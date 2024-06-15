@@ -1,0 +1,53 @@
+{% extends "base.html" %} {% block body_class %}journaling{% endblock %} {%block
+title %} Home {%endblock%} {% block content %}
+
+<div class="row justify-content-md-center">
+  <div class="col-md-7 col-lg-5">
+    <h1 class="join-message">What's on your mind?</h1>
+    <form method="POST" id="journal_form">
+      {{ form.hidden_tag() }} {% for field in form if field.widget.input_type !=
+      'hidden' %} {% for error in field.errors %}
+      <span class="text-danger">{{ error }}</span>
+      {% endfor %}
+      <label for="{{ field.id }}">{{ field.label.text }}</label>
+      {{ field(class="form-control") }} {% endfor %}
+
+
+      <button class="btn btn-primary btn-lg btn-block">Save Journal</button>
+      <button id="classify-btn" class="btn btn-primary btn-lg btn-block">Classify Journal</button>
+
+
+    </form>
+  </div>
+</div>
+
+<div id="clasification-results">
+    
+
+</div>
+
+<h1>List of Journals</h1>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Last Modified</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for journal in journals %}
+            <tr>
+                <td>{{ journal.title }}</td>
+                <td>{{ journal.local_modified_at(user_timezone) }}</td>
+                <td>
+                    <a href="" class="btn btn-primary btn-sm">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{%endblock%}

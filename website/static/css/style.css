@@ -1,0 +1,98 @@
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+}
+th {
+    background-color: #f2f2f2;
+}
+tr:hover {
+    background-color: #f5f5f5;
+}
+.edit-link {
+    /* color: purple; */
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+
+.checkbox-list ul {
+    list-style-type: none; /* Remove bullet points */
+    padding-left: 0; /* Optional: Remove padding if desired */
+}
+
+/* .missed {
+    background-color: #ffcccc; /* Light red background for missed days */
+    /* text-decoration: line-through; Strike-through text for missed days */
+/* } */ 
+
+/* .missed label {
+    text-decoration: line-through; /* Strike-through text for missed days */
+/* } */
+
+.goal-day {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+    cursor: pointer;
+}
+
+.goal-day:hover {
+    background-color: #f0f0f0; /* Light grey on hover */
+}
+
+.goal-day input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.goal-day label {
+    flex-grow: 1;
+    cursor: pointer;
+}
+
+.missed {
+    background-color: #ffe5e5; /* Softer red for missed goals */
+}
+
+.missed label {
+    text-decoration: line-through;
+    color: #cc0000; /* Darker red text for better contrast */
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .goal-day {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .goal-day label {
+        margin-top: 5px;
+    }
+}
+
+
+.checkbox-label {
+    cursor: pointer;
+    font-size: 24px; /* You can adjust the size of the icons */
+}
+
+.checkbox-label .checked {
+    display: none; /* Hide the checked icon initially */
+}
+
+.custom-checkbox:checked + .checkbox-label .unchecked {
+    display: none; /* Hide the unchecked icon when checked */
+}
+
+.custom-checkbox:checked + .checkbox-label .checked {
+    display: inline; /* Show the checked icon when checked */
+}
