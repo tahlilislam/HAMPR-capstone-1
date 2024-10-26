@@ -18,7 +18,11 @@
     />
 
     <link rel="stylesheet" href="/static/css/style.css" />
-    <script src="https://kit.fontawesome.com/bdf3d87035.js" crossorigin="anonymous" defer></script>
+    <script
+      src="https://kit.fontawesome.com/bdf3d87035.js"
+      crossorigin="anonymous"
+      defer
+    ></script>
     <script
       src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"
       defer
@@ -42,15 +46,16 @@
       crossorigin="anonymous"
       defer
     ></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
     <script src="/static/js/timezone.js" defer></script>
     <script src="/static/js/location_search.js" defer></script>
     <script src="/static/js/text_classify.js" defer></script>
 
-
     <title>{%block title %} {%endblock%}</title>
   </head>
   <body>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script> -->
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <button
@@ -66,7 +71,7 @@
       </button>
       <div class="collapse navbar-collapse" id="navbar">
         <div class="navbar-nav">
-          {% if user.is_authenticated %}
+          {% if current_user.is_authenticated %}
           <a class="nav-item nav-link" id="home" href="/">Home</a>
           <a class="nav-item nav-link" id="my-goals" href="/mygoals">Goals</a>
           <a class="nav-item nav-link" id="logout" href="/logout">Logout</a>
@@ -78,23 +83,25 @@
       </div>
     </nav>
 
-    {% with messages = get_flashed_messages(with_categories=true) %} {% if
-    messages %} {% for category, message in messages %} {% if category ==
-    'error' %}
-    <div class="alert alert-danger alter-dismissable fade show" role="alert">
-      {{ message }}
-      <button type="button" class="close" data-dismiss="alert">
-        <span aria-hidden="true">&times;</span>
-      </button>
+    <div class="container-fluid" style="padding: 0; margin: 0;">
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %} {% if category ==
+      'error' %}
+      <div class="alert alert-danger alter-dismissable fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      {% else %}
+      <div class="alert alert-success alter-dismissable fade show" role="alert">
+        {{ message }}
+        <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      {% endif %} {% endfor %} {% endif %} {% endwith %}
     </div>
-    {% else %}
-    <div class="alert alert-success alter-dismissable fade show" role="alert">
-      {{ message }}
-      <button type="button" class="close" data-dismiss="alert">
-        <span aria-hidden="true">&times;</span>
-      </button>
-    </div>
-    {% endif %} {% endfor %} {% endif %} {% endwith %}
 
     <div class="container">{% block content %} {%endblock%}</div>
   </body>

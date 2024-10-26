@@ -5,45 +5,29 @@ from os import path
 from flask import Flask, request, session
 from flask_wtf.csrf import CSRFProtect
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
+from flask_login import LoginManager, FlaskLoginClient
 from flask_migrate import Migrate
 from flask_debugtoolbar import DebugToolbarExtension
 from celery import Celery, Task
 from celery.schedules import crontab
 from flask_mail import Mail, Message
-# from flask_mailman import Mail, EmailMessage
+from flask_caching import Cache
+
 
 db = SQLAlchemy()
 migrate = Migrate()
-# mail = Mail()
 
 DB_NAME = "hampr_db"
 
+cache = Cache()
 
-# def timezone_middleware(app):
+import redis
 
-#         @app.route('/get-timezone', methods=['POST'])
-#         def update_timezone():
-#                     timezone = request.json.get('timezone')
-#                     if timezone:
-#                         session['timezone'] = timezone
-#                         return 'Timezone updated successfully', 200
-#                     else:
-#                         return 'Timezone not provided', 400
+ # Create a Redis connection
+redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
-# timezone = request.json.get('timezone')
-# if timezone:
-#     session['timezone'] = timezone
 
-# @csrf.protect
-# @app.route('/get-timezone', methods=['POST'])
-# def update_timezone():
-#             timezone = request.json.get('timezone')
-#             if timezone:
-#                 session['timezone'] = timezone
-#                 return 'Timezone updated successfully', 200
-#             else:
-#                 return 'Timezone not provided', 400
+
 
 
 def create_app():
@@ -55,7 +39,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         os.environ.get('DATABASE_URL', f'postgresql:///{DB_NAME}'))
 
-    app.config['ACCESS_TOKEN'] = os.environ.get('ACCESS_TOKEN')
+    # app.config['ACCESS_TOKEN'] = os.environ.get('ACCESS_TOKEN')
     app.config['PROJECT_ID'] = os.environ.get('PROJECT_ID')
     app.config['ENDPOINT_ID'] = os.environ.get('ENDPOINT_ID')
 
@@ -67,14 +51,29 @@ def create_app():
     app.config['MAIL_PORT'] = 465
     app.config['MAIL_USERNAME'] = 'dummieuserexperience@gmail.com'
     app.config['MAIL_PASSWORD'] = "nxfh rsnq wseo fhgh"
+    # new gmail app password
+    # app.config['MAIL_PASSWORD'] = "pyzj rybp puya wjkr"
     app.config['MAIL_USE_TLS'] = False
     app.config['MAIL_USE_SSL'] = True
+
+    app.config['CACHE_TYPE'] = 'simple'  # You can use other cache types as well
+
+    # # Configure caching
+    # app.config['CACHE_TYPE'] = 'redis'
+    # app.config['CACHE_REDIS_URL'] = 'redis://127.0.0.1:6379/0'  # Adjust as necessary
+    
+    
+    app.test_client_class = FlaskLoginClient
 
     # app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
     toolbar = DebugToolbarExtension(app)
     with app.app_context():
         db.init_app(app)
         migrate.init_app(app, db)
+        cache.init_app(app)
+
+        # cache = Cache(app)
+
         # migrate = Migrate(app, db)
 
     # IF YOU ARE RUNNING THE MODEL FILE IN THE TERMINAL COMMENT THE FUNCTION BELOW TO PREVENT CIRCULAR IMPORTS AND ERRORS
@@ -94,16 +93,20 @@ def create_app():
 
     return app
 
+# class Config:
+    
+
+
 
 def login_helper(app):
     # db must be created first before importing models
     from .views import views
     from .auth import auth
-    from .text_classify import text_classify
+    from .classify import classify
 
     app.register_blueprint(views, url_prefix='/')
     app.register_blueprint(auth, url_prefix='/')
-    app.register_blueprint(text_classify, url_prefix='/')
+    app.register_blueprint(classify, url_prefix='/')
 
     from .models import User, Journal
 
@@ -145,12 +148,32 @@ def celery_init_app(app: Flask) -> Celery:
     class FlaskTask(Task):
         def __call__(self, *args: object, **kwargs: object) -> object:
             with app.app_context():
-                return self.run(*args, **kwargs)
+                with app.test_request_context():
+                    return self.run(*args, **kwargs)
 
     celery_app = Celery(app.name, task_cls=FlaskTask)
 
     celery_app.config_from_object(CeleryConfig)
     celery_app.set_default()
+
+    ####33
+
+    # @celery_app.on_after_configure.connect
+    # def setup_periodic_tasks(sender, **kwargs):
+    #     @sender.task
+    #     def fetch_and_send_reminders():
+    #         from website.models import User
+    #         from website.tasks import send_mail
+    #         users = User.query.all()
+    #         user_timezones = {user.id: user.get_timezone() for user in users}  # Assuming you have a method to get the user's timezone
+
+    #         send_mail.delay(user_timezones)
+
+    #     sender.add_periodic_task(crontab(hour=0, minute=0), fetch_and_send_reminders)
+
+
+    #########
+
     app.extensions["celery"] = celery_app
     return celery_app
 

@@ -1,15 +1,40 @@
-from celery import shared_task
+from celery import shared_task, Task
 from flask_login import login_required, current_user
 from website.models import User, Email, Goal, GoalProgress
 from datetime import datetime, time, timedelta
-# from flask_mailman import Mail, EmailMessage
 from flask_mail import Message, Mail
 from website import create_app
 from flask import session
 from zoneinfo import ZoneInfo
+# from website.auth import cache
+# from website.timezone_store import user_timezones
+
+import os
+import requests
 
 
 app = create_app()
+# user_timezone = session.get('timezone', 'UTC')
+
+
+
+# class RequestContextTask(Task):
+#     """Base class for tasks that run inside a Flask request context."""
+#     abstract = True
+
+#     def __call__(self, *args, **kwargs):
+#         with app.test_request_context():
+#             return super(RequestContextTask, self).__call__(*args, **kwargs)
+
+
+MICROSERVICE_URL = os.getenv('MICROSERVICE_URL', 'http://127.0.0.1:5000')
+
+
+# @shared_task(ignore_result=False)
+# def get_timezone():
+#     with app.app_context():
+#         user_timezone = session.get('timezone')
+#         return user_timezone
 
 
 @shared_task(ignore_result=False)
@@ -25,6 +50,7 @@ def what():
 @shared_task(bind=True, ignore_result=False)
 def mark_missed_goals(self):
     with app.app_context():
+        print("RUNNING MARKED MISSED GOALS")
 
         # to prevent circular import erros we are importing it locally
         from website.models import db
@@ -50,74 +76,73 @@ def mark_missed_goals(self):
 
             db.session.commit()
 
-
+# @celery.task(base=RequestContextTask)
 @shared_task(bind=True, ignore_result=False)
 def send_mail(self):
-
     with app.app_context():
 
-        from website.models import User, Email
+        # with app.test_request_context():
 
-        # user = User.query.get(user_id)
+        from website.models import User, Email
+        from website.timezone_store import user_timezones
+        from website import redis_client  # Adjust this import based on your project structure
+
+
+        # from website import cache
 
         users = User.query.all()
-        user_timezone = session.get('timezone')
 
-        # for user in users:
-        # if user:
-        # Check if it's time to send a reminder based on the user's frequency
-        # if user.reminder_frequency.should_send_reminder():
-        # Retrieve the user's email address
-        # email = "dummieuserexperience@gmail.com"
-        # email = user.email
-        # msg = EmailMessage()
+        print(f"ARRAY LENGTH: {len(users)}")
 
         for user in users:
-            if user is current_user:
-                for goal in user.goals:
-                    if goal.should_send_reminder(user_timezone):
+            print(user)
+            print(len(user.goals))
+            # user_timezone = user_timezones.get(user.id, 'UTC')  # Get timezone for each user
+            user_timezone = redis_client.get(f'timezone:{user.id}')
+            if user_timezone:
+                user_timezone = user_timezone.decode('utf-8')  # Decode bytes to string
+            # else:
+            #     user_timezone = 'UTC'  # Fallback to UTC if not set
 
-                        mail = Mail(app)
-                        msg = Message()
-                        msg = Message(subject='Hello from the other side!',
-                                      sender='noreply@mailtrap.io', recipients=['dummieuserexperience@gmail.com'])
-                        msg.body = "Hey Paul, sending you this email from my Flask app, lmk if it works"
-                        mail.send(msg)
 
-        return "Message sent!"
+            # # Call the API to get the timezone
+            # # Replace with your actual API URL
+            # response = requests.get('http://127.0.0.1:5000/get-timezone')
+            # if response.status_code == 200:
+            #     user_timezone = response.json().get('timezone', 'UTC')
+            #     print(f'USER TIMEZONE:{user_timezone}')
+            # # else:
+            # #     user_timezone = 'UTC'  # Default if API call fails
 
-        # # When creating an Email object
-        # user_timezone = 'America/New_York'  # Example timezone
-        # email = Email(
-        #     recipient='example@example.com',
-        #     subject='Test Email',
-        #     email_body='This is a test email.',
-        #     sent_at= datetime.utcnow(),  # Store timestamps in UTC
-        #     user_id=user.id,  # Example user ID
-        #     user_timezone=user_timezone
-        # )
+            # # Get timezone from cache
+            # # user_timezone = cache.get('timezone')
 
-        #  id = db.Column(db.Integer, primary_key=True)
-        #     recipient = db.Column(db.String(100), nullable=False)
-        #     subject = db.Column(db.String(255), nullable=False)
-        #     email_body = db.Column(db.Text, nullable=False)
-        #     sent_at = db.Column(db.DateTime(timezone=True), nullable=False)
-        #     status = db.Column(db.String(20), default='pending')
+            # user_timezone = session.get('timezone', 'UTC')
 
-        #     user_id = db.Column(db.Integer, db.ForeignKey(
-        #         'users.id', ondelete='cascade'))
-        #     user = db.relationship("User", backref="emails")
-        #     # Store user's timezone info
-        #     user_timezone = db.Column(db.String(50), nullable=False)
+            print(f"User: {user.username}, Timezone: {user_timezone}")
 
-        # Convert and display timestamp in the user's timezone
-        # local_sent_at = Email.localize_timestamp(
-        #     email.sent_at, email.user_timezone)
-        # print(f"Sent at (User's Local Time): {local_sent_at}")
+            for goal in user.goals:
+                if goal.should_send_reminder(user_timezone):
+                    print(goal)
+                    mail = Mail(app)
+                    msg = Message()
+                    msg = Message(subject=f'Reminder to complete your goal: {goal.goal_text}',
+                                  sender='noreply@mailtrap.io', recipients=['dummieuserexperience@gmail.com'])
+                    msg.body = f"Hey {user.first_name}, \n\nThis is a reminder to complete your goal: {goal.goal_text}.\n\nBest regards,\nYour App Team"
+                    mail.send(msg)
+                    print("RAN SENT MAIL")
 
-        # # Send the email
-        # with current_app.app_context():
-        #     mail = current_app.extensions['mail']
-        #     mail.send(message)
+        # for user in users:
+        #     if user is current_user:
+        #         for goal in user.goals:
+        #             if goal.should_send_reminder(user_timezone):
 
-        # return "USER not found"
+        #                 mail = Mail(app)
+        #                 msg = Message()
+        #                 msg = Message(subject='Reminder to complete your goal:',
+        #                               sender='noreply@mailtrap.io', recipients=['dummieuserexperience@gmail.com'])
+        #                 msg.body = "Hey Paul, sending you this email from my Flask app, lmk if it works"
+        #                 mail.send(msg)
+        #                 print("RAN SENT MAIL")
+
+        return "Message sent or waiting for reminder window!"

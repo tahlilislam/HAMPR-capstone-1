@@ -29,6 +29,7 @@ def home():
 
     # Assume you store the user's timezone in session
     user_timezone = session.get('timezone', 'UTC')
+    # print(f'TIMEZONE: {user_timezone}')
     # Retrieve journal entries for the user
     journals = Journal.query.filter_by(user_id=current_user.id).all()
 
@@ -51,8 +52,15 @@ def set_goal():
         ).first()
 
         if existing_goal:
+            print("An active goal already exists")  # Debug: Check if this condition is hit
             flash('You already have an active goal.', 'error')
             return redirect(url_for('views.my_goals'))
+        
+        if existing_goal is None:
+            print("No existing active goal found.")
+        else:
+            print(f"Found an existing goal: {existing_goal.goal_text}")
+
 
     # Creating a new goal
 
@@ -103,6 +111,8 @@ def set_goal():
 
         flash('Goal set successfully', 'success')
         return redirect(url_for('views.my_goals'))
+    
+    print("Form validation failed:", form.errors)
 
     return render_template("set_goals.html", user=current_user, form=form)
 

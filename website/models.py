@@ -13,8 +13,8 @@ from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt()
 
-# AN APP INSTANCE CREATED TO HELP CREATE MODEL INSTANCES ON PYTHON SHELL; UNCOMMENT WHEN NEEDED
-# NEED TO PUSH and POP app CONTEXT WHILE WORKING IN TERMINAL by typing ctx.push() and ctx.pop() when done
+## AN APP INSTANCE CREATED TO HELP CREATE MODEL INSTANCES ON PYTHON SHELL; UNCOMMENT WHEN NEEDED
+## NEED TO PUSH and POP app CONTEXT WHILE WORKING IN TERMINAL by typing ctx.push() and ctx.pop() when done
 # from website import create_app
 # app = create_app()
 # ctx = app.app_context()
@@ -181,9 +181,12 @@ class Goal(db.Model):
     def end_date_local(self, user_timezone):
         return self.end_date.astimezone(ZoneInfo(user_timezone))
 
-    def should_send_reminder(self, user_timezone):
+# #### add time as parameter and use default values
+#### now will be changing when we running tests
+    def should_send_reminder(self, user_timezone, utc_now=None):
         # Get the current utc datetime as timezone aware
-        utc_now = dt.utcnow().replace(tzinfo=ZoneInfo('UTC'))
+        if utc_now is None:
+            utc_now = dt.utcnow().replace(tzinfo=ZoneInfo('UTC'))
 
         user_tzinfo = ZoneInfo(user_timezone)
 

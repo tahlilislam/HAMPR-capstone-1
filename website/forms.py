@@ -101,8 +101,8 @@ class GoalForm(FlaskForm):
     goal_text = StringField('Goal Text', validators=[
                             DataRequired(), Length(max=150)])
     days_of_week = MultiCheckboxField('What days would you work you work on your goal?', choices=[
-        (1, 'Monday'), (2, 'Tuesday'), (3, 'Wednesday'),
-        (4, 'Thursday'), (5, 'Friday'), (6, 'Saturday'), (7, 'Sunday')
+        (0, 'Monday'), (1, 'Tuesday'), (2, 'Wednesday'),
+        (3, 'Thursday'), (4, 'Friday'), (5, 'Saturday'), (6, 'Sunday')
     ], render_kw={'class': 'checkbox-list'})
     reminder_time = TimeField(
         'When would you like to be reminded?', validators=[DataRequired()])
