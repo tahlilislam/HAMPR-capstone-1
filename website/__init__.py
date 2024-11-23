@@ -34,7 +34,7 @@ def create_app():
     # Get DB_URI from environ variable (useful for production/testing) or,
     # if not set there, use development local db.
     app.config['SQLALCHEMY_DATABASE_URI'] = (
-        os.getenv('DATABASE_URL', f'postgresql:///{DB_NAME}'))
+        os.environ.get('DATABASE_URL', f'postgresql:///{DB_NAME}'))
 
     # app.config['ACCESS_TOKEN'] = os.environ.get('ACCESS_TOKEN')
     app.config['PROJECT_ID'] = os.environ.get('PROJECT_ID')
