@@ -14,6 +14,9 @@ views = Blueprint('views', __name__)
 @views.route('/', methods=['GET', 'POST'])
 @login_required
 def home():
+    # Get timezone from session, or fall back to the value stored in the database
+    user_timezone = session.get('timezone', current_user.timezone)
+
     form = JournalForm()
 
     if form.validate_on_submit():
@@ -44,6 +47,7 @@ def set_goal():
     if form.validate_on_submit():
 
     # Check for an existing active goal
+        print(f"Checking for active goals for user {current_user.id}")
 
         existing_goal = Goal.query.filter(
             Goal.user_id == current_user.id,
@@ -55,7 +59,8 @@ def set_goal():
             print("An active goal already exists")  # Debug: Check if this condition is hit
             flash('You already have an active goal.', 'error')
             return redirect(url_for('views.my_goals'))
-        
+        print(f"Existing Goal Found: {existing_goal}")
+
         if existing_goal is None:
             print("No existing active goal found.")
         else:

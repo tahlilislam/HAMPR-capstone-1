@@ -1,48 +1,45 @@
 import os
-from unittest import TestCase
-from flask import json, session, Flask
-from flask_login import FlaskLoginClient
-from flask_sqlalchemy import SQLAlchemy
+import unittest
+from flask import Flask
+from flask_login import current_user
+
 from website.models import User
-from website import create_app
-
-app = Flask(__name__)
-db = SQLAlchemy()
-
-with app.app_context():
-    db.init_app(app)
+from website import db, login_helper
 
 TEST_DB_NAME = "hampr_db_test"
 
-# Set the test database URL
-os.environ['DATABASE_URL'] = f"postgresql:///{TEST_DB_NAME}"
-
-# Create the test client
+# create a new app variable so that configuration from the create app() function used isn't also imported
+app = Flask(__name__)
 
 
-class AuthViewTestCase(TestCase):
-    """Test views for authentication."""
-
+class AuthViewTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Setup for the test case class"""
-        app.config['WTF_CSRF_ENABLED'] = False  # Disable CSRF protection for testing
+        """Set up the test client and create a test database."""
         app.config['TESTING'] = True
-        app.config['DEBUG'] = False
-        # Initialize FlaskLoginClient
-        app.test_client_class = FlaskLoginClient
+        # Disable CSRF protection for testing
+        app.config['WTF_CSRF_ENABLED'] = False
+        app.config['SECRET_KEY'] = 'I have a secret!'
 
-        cls.client = app.test_client()
+        cls.app = app  # Use the testing configuration
+        cls.client = cls.app.test_client()
 
-        # Create the test database
-        with app.app_context():
+        with cls.app.app_context():
+            app.config['SQLALCHEMY_DATABASE_URI'] = (
+                os.environ.get('DATABASE_URL', f'postgresql:///{TEST_DB_NAME}'))
+            login_helper(cls.app)
+            db.init_app(cls.app)
+            # db.drop_all()
             db.create_all()
 
     def setUp(self):
-        """Create a test user and clean the database."""
-        with app.app_context():
-        #     db.drop_all()
-        #     db.create_all()
+        """Create test client, add sample data."""
+
+        # print("TESTTINGGNGNNG")
+
+        with self.app.app_context():
+            db.drop_all()
+            db.create_all()
 
             self.test_user = User.signup(
                 username="testuser",
@@ -60,19 +57,24 @@ class AuthViewTestCase(TestCase):
             self.test_user_id = self.test_user.id
             db.session.commit()
 
+
     def tearDown(self):
         """Rollback any changes made to the database"""
-        # db.session.rollback()
+        with self.app.app_context():
+            db.session.rollback()
 
     @classmethod
     def tearDownClass(cls):
         """Drop all tables after all tests"""
-        # db.drop_all()
+        with cls.app.app_context():
+            db.drop_all()
 
-    # Test for user signup
     def test_signup(self):
         """Test user signup"""
         with self.client as c:
+            # Since this is a wtf FORM make sure the values inputted are valid in your form. For example,
+            # a "None" value might be appropriate for database. But your flask form doesn't have an option for "None".
+            # Otherwise you might hit integrity error setup in the app that will redirect you.
             response = c.post('/sign-up', data={
                 'username': 'newuser',
                 'password': 'newpassword',
@@ -80,19 +82,20 @@ class AuthViewTestCase(TestCase):
                 'first_name': 'New',
                 'last_name': 'User',
                 'age': '30',
-                'ethnicity': 'None',
-                'profession': 'None',
-                'financial_status_range': 'None',
-                'education_level': 'None',
-                'location_general': 'None'
-            })
-            # Redirects after signup
-            self.assertEqual(response.status_code, 302)
-            self.assertIn(b'Hello, newuser!', response.data)
+                'ethnicity': 'asian',
+                'profession': 'legal',
+                'financial_status_range': 'low',
+                'education_level': 'other',
+                'location_general': '92222'
+            }, follow_redirects=True)
 
-    # Test for duplicate username during signup
+            # Redirects after signup, follow redirects is set to True so status code is 200
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"What's on your mind?", response.data)
+
     def test_signup_duplicate_username(self):
         """Test signup with an existing username"""
+        # Use current_user provided by Flask-Login instead of user to avoid issues when user is not defined.
         with self.client as c:
             response = c.post('/sign-up', data={
                 'username': 'testuser',  # existing username
@@ -101,28 +104,64 @@ class AuthViewTestCase(TestCase):
                 'first_name': 'Duplicate',
                 'last_name': 'User',
                 'age': '30',
+                'ethnicity': 'asian',
+                'profession': 'legal',
+                'financial_status_range': 'high',
+                'education_level': 'other',
+                'location_general': '95555'
+            })
+            self.assertEqual(response.status_code, 200)  # Shows form again
+            self.assertIn(b'Username already taken', response.data)
+
+    def test_signup_form_validation(self):
+        """Test signup form validation"""
+        with self.client as c:
+            response = c.post('/sign-up', data={
+                'username': '',  # Missing username
+                'password': 'short',  # Short password
+                'email': 'invalid-email',  # Invalid email format
+                'first_name': 'Test',
+                'last_name': 'User',
+                'age': '25',
                 'ethnicity': 'None',
                 'profession': 'None',
                 'financial_status_range': 'None',
                 'education_level': 'None',
                 'location_general': 'None'
             })
-            self.assertEqual(response.status_code, 200)  # Shows form again
-            self.assertIn(b'Username already taken', response.data)
 
-    # Test for user login
+            # Expecting a validation error or re-presentation of the form
+            self.assertEqual(response.status_code, 200)
+
+            self.assertIn(b'Invalid email address', response.data)
+
+    def test_current_user(self):
+        """Testing current_user for flask login and ensuring user is authenticated"""
+        with self.client as c:
+            # Log the user in
+            c.post('/login', data={
+                'username': 'testuser',
+                'password': 'testpassword',
+            })
+
+        # Check the current user in a protected route
+            response = c.get('/')  # Protected route
+            # Ensure user is authenticated
+            self.assertTrue(current_user.is_authenticated)
+            # Ensure current user is correct
+            self.assertEqual(current_user.username, 'testuser')
+
     def test_login(self):
         """Test user login"""
         with self.client as c:
             response = c.post('/login', data={
                 'username': 'testuser',
                 'password': 'testpassword'
-            })
-            # Redirects after login
-            self.assertEqual(response.status_code, 302)
+            }, follow_redirects=True)
+            # Redirects after login, since follows redirects is set to True, status code will just be 200 ok
+            self.assertEqual(response.status_code, 200)
             self.assertIn(b'Hello, testuser!', response.data)
 
-    # Test for invalid login credentials
     def test_login_invalid_credentials(self):
         """Test login with invalid credentials"""
         with self.client as c:
@@ -133,26 +172,42 @@ class AuthViewTestCase(TestCase):
             self.assertEqual(response.status_code, 200)  # Shows form again
             self.assertIn(b'Invalid credentials.', response.data)
 
-    # Test for user logout
     def test_logout(self):
         """Test user logout"""
-        with self.client(user=self.test_user) as c:
-                    response = c.get('/logout', follow_redirects=True)
-                    self.assertEqual(response.status_code, 200)
-                    self.assertIn(b'Please log in', response.data)
-
-    # Test timezone update
-    def test_get_timezone(self):
-        """Test updating timezone"""
         with self.client as c:
-            response = c.post('/get-timezone', data=json.dumps({'timezone': 'UTC'}), content_type='application/json')
+            response = c.get('/logout', follow_redirects=True)
             self.assertEqual(response.status_code, 200)
-            self.assertEqual(session.get('timezone'), 'UTC')
+            self.assertIn(b'Log in to your HaMPR account', response.data)
 
-    # Test timezone update without timezone
-    def test_get_timezone_missing_timezone(self):
-        """Test updating timezone with missing timezone"""
+    def test_set_timezone(self):
         with self.client as c:
-            response = c.post('/get-timezone', data=json.dumps({}), content_type='application/json')
-            self.assertEqual(response.status_code, 400)
-            self.assertNotIn('timezone', session)
+            # Log the user in
+            with c.session_transaction() as sess:
+                # this key is used to determine id the user's session is fresh in flask login 
+                # which means the user has recently authenticated with their initials
+                sess['_fresh'] = True
+
+            timezone_data = {'timezone': 'America/New_York'}
+            response = c.post('/set-timezone', json=timezone_data)
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data.decode('utf-8'),
+                             'Timezone updated successfully')
+
+            with c.session_transaction() as sess:
+                self.assertEqual(sess['timezone'], 'America/New_York')
+
+    def test_get_timezone(self):
+        with self.client as c:
+            with c.session_transaction() as sess:
+                sess['_fresh'] = True
+                sess['timezone'] = 'Europe/London'
+
+            response = c.get('/get-timezone')
+
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b'Europe/London', response.data)
+
+
+if __name__ == '__main__':
+    unittest.main()

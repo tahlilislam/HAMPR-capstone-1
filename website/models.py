@@ -42,6 +42,9 @@ class User(db.Model, UserMixin):
     location_general = db.Column(db.String(150))
     created_at = db.Column(db.DateTime(timezone=True),
                            default=dt.now(tz=ZoneInfo('UTC')))
+    # Adding a new timezone column that saves session timezone data
+    timezone = db.Column(db.String(50), default='UTC')
+
 
     my_journals = db.relationship('Journal', backref='author')
 
@@ -68,7 +71,8 @@ class User(db.Model, UserMixin):
             education_level=education_level,
             ethnicity=ethnicity,
             location_general=location_general,
-            financial_status_range=financial_status_range
+            financial_status_range=financial_status_range,
+            # timezone=timezone
         )
 
         db.session.add(user)
@@ -182,7 +186,7 @@ class Goal(db.Model):
         return self.end_date.astimezone(ZoneInfo(user_timezone))
 
 # #### add time as parameter and use default values
-#### now will be changing when we running tests
+#### since _now will be changing when we are running tests
     def should_send_reminder(self, user_timezone, utc_now=None):
         # Get the current utc datetime as timezone aware
         if utc_now is None:

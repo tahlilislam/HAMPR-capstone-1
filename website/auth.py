@@ -4,12 +4,9 @@ from .models import User
 from flask_login import login_user, login_required, logout_user, current_user
 from sqlalchemy.exc import IntegrityError
 from flask import request, session
-from . import db, cache
-# from .tasks import send_mail
-from website.timezone_store import user_timezones
-from website import redis_client  # Adjust this import based on your project structure
-
-
+from . import db
+# Adjust this import based on your project structure
+from website import redis_client
 
 
 auth = Blueprint('auth', __name__)
@@ -18,34 +15,52 @@ auth = Blueprint('auth', __name__)
 # @cache.cached(timeout=60, query_string=True)
 @auth.route('/set-timezone', methods=['POST'])
 def set_timezone():
-        # from website.tasks import send_mail
+    # from website.tasks import send_mail
 
-        timezone = request.json.get('timezone')
-        
-        if timezone:
-            session['timezone'] = timezone
-            # cache.set("timezone", timezone)
-            # print(cache.get('timezone'))  # Should print the timezone you just set
+    timezone = request.json.get('timezone')
 
-            #  # Call your Celery task and pass the timezone
-            # send_mail.delay(timezone)
+    if timezone:
+        session['timezone'] = timezone
+        print(timezone)
 
-            # user_timezones[current_user.id] = timezone  # Update the in-memory dictionary
+    #  # Get the current logged-in user's ID
+    #     user_id = current_user.id
 
-            # redis_client.set(f"user_timezone:{current_user.id}", timezone)  # Store in Redis
-            # print(redis_client.get(f"user_timezone:{current_user.id}"))  # Debug: Verify stored value
+    #     # Query the user by their ID
+    #     user = User.query.get(user_id)
 
-            return 'Timezone updated successfully', 200
-        else:
-            session['timezone'] = 'UTC'
-            return 'Timezone not provided', 400
+    #     if user:
+    #         # Update the timezone
+    #         session_timezone = session.get('timezone', 'UTC')
+
+    #         user.timezone = session_timezone
+
+    #         # Commit the changes
+    #         db.session.commit()
+
+
+        return 'Timezone updated successfully', 200
+    else:
+        session['timezone'] = 'UTC'
+
+        return 'Timezone not provided', 400
+
 
 @auth.route('/get-timezone', methods=['GET'])
 def get_timezone():
-    timezone = session.get('timezone', 'UTC')  
-    # print(cache.get('timezone'))  # Should print the timezone you just set
+    timezone = session.get('timezone', 'UTC')
 
-    return jsonify({'timezone': timezone})
+    return jsonify({
+        'data': {
+            'timezone': current_user.timezone,
+            'timezone saved to session': timezone,
+            'user_info': {
+                'id': current_user.id,
+                'username': current_user.username
+            }
+        },
+        'message': 'Timezone and user data fetched successfully'
+    })
 
 
 @auth.route('/sign-up', methods=["GET", "POST"])
@@ -62,6 +77,9 @@ def signup():
 
     form = UserAddForm()
 
+    #  # Extract timezone from the JSON payload
+    # timezone = request.json.get('timezone')
+
     if form.validate_on_submit():
         try:
             user = User.signup(
@@ -75,7 +93,8 @@ def signup():
                 profession=form.profession.data,
                 financial_status_range=form.financial_status_range.data,
                 education_level=form.education_level.data,
-                location_general=form.location_general.data
+                location_general=form.location_general.data,
+                # timezone=timezone
                 # image_url=form.image_url.data or User.image_url.default.arg,
             )
             db.session.commit()
@@ -98,7 +117,6 @@ def signup():
 # @auth.route('/test', methods=["GET", "POST"])
 # def test_route():
 #     return "HELLO from test"
-
 
 
 @auth.route('/login', methods=["GET", "POST"])

@@ -2,16 +2,14 @@
 # what that means is that you can import the folder and whatever is in folder will run automatically
 import os
 from os import path
-from flask import Flask, request, session
-from flask_wtf.csrf import CSRFProtect
+from dotenv import load_dotenv
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, FlaskLoginClient
 from flask_migrate import Migrate
 from flask_debugtoolbar import DebugToolbarExtension
 from celery import Celery, Task
 from celery.schedules import crontab
-from flask_mail import Mail, Message
-from flask_caching import Cache
 
 
 db = SQLAlchemy()
@@ -19,15 +17,14 @@ migrate = Migrate()
 
 DB_NAME = "hampr_db"
 
-cache = Cache()
 
 import redis
 
  # Create a Redis connection
 redis_client = redis.StrictRedis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
-
-
+# Loading environment variables
+load_dotenv()
 
 
 def create_app():
@@ -37,7 +34,7 @@ def create_app():
     # Get DB_URI from environ variable (useful for production/testing) or,
     # if not set there, use development local db.
     app.config['SQLALCHEMY_DATABASE_URI'] = (
-        os.environ.get('DATABASE_URL', f'postgresql:///{DB_NAME}'))
+        os.getenv('DATABASE_URL', f'postgresql:///{DB_NAME}'))
 
     # app.config['ACCESS_TOKEN'] = os.environ.get('ACCESS_TOKEN')
     app.config['PROJECT_ID'] = os.environ.get('PROJECT_ID')
@@ -49,10 +46,9 @@ def create_app():
 
     app.config['MAIL_SERVER'] = 'smtp.gmail.com'
     app.config['MAIL_PORT'] = 465
-    app.config['MAIL_USERNAME'] = 'dummieuserexperience@gmail.com'
-    app.config['MAIL_PASSWORD'] = "nxfh rsnq wseo fhgh"
-    # new gmail app password
-    # app.config['MAIL_PASSWORD'] = "pyzj rybp puya wjkr"
+    app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+    app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+  
     app.config['MAIL_USE_TLS'] = False
     app.config['MAIL_USE_SSL'] = True
 
@@ -69,16 +65,16 @@ def create_app():
     toolbar = DebugToolbarExtension(app)
     with app.app_context():
         db.init_app(app)
+
+        # TO RECREATE THE DATABASE USE THIS CODE 
+        # from .models import User
+        # db.create_all()
+
         migrate.init_app(app, db)
-        cache.init_app(app)
 
-        # cache = Cache(app)
-
-        # migrate = Migrate(app, db)
-
-    # IF YOU ARE RUNNING THE MODEL FILE IN THE TERMINAL COMMENT THE FUNCTION BELOW TO PREVENT CIRCULAR IMPORTS AND ERRORS
+    ##### IF YOU ARE RUNNING THE MODEL FILE IN THE TERMINAL COMMENT THE FUNCTION BELOW TO PREVENT CIRCULAR IMPORTS AND ERRORS
         login_helper(app)
-    ######
+    #######
 
     app.config.from_mapping(
         CELERY=dict(
@@ -91,11 +87,7 @@ def create_app():
         celery_init_app(app)
         # mail.init_app(app)
 
-    return app
-
-# class Config:
-    
-
+    return app    
 
 
 def login_helper(app):
@@ -108,7 +100,7 @@ def login_helper(app):
     app.register_blueprint(auth, url_prefix='/')
     app.register_blueprint(classify, url_prefix='/')
 
-    from .models import User, Journal
+    from .models import User
 
     login_manager = LoginManager()
     login_manager.login_view = 'auth.login'
@@ -133,13 +125,13 @@ class CeleryConfig:
     CELERYBEAT_SCHEDULE = {
         "time_scheduler": {
             "task": "website.tasks.send_mail",
-            "schedule": crontab()  # set schedule time !
-            # "schedule": 60.0  # set schedule time !
+            # "schedule": crontab()  ##runs every minute using for testing only
+            'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
         },
         'mark-missed-goals-every-morning': {
             'task': 'website.tasks.mark_missed_goals',
-            # 'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
-            "schedule": crontab()
+            'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+            # "schedule": crontab() ##runs every minute using for testing only
         }
     }
 
@@ -182,5 +174,5 @@ def create_db(app):
     if not path.exists('website/' + DB_NAME):
         db.create_all(app=app)
         # If the database doesn't exist, initialize Flask-Migrate to handle migrations
-        # migrate = Migrate(app, db)
+        migrate = Migrate(app, db)
         print('Created Database!')

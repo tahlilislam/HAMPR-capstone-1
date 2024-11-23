@@ -16,3 +16,11 @@ celery -A website.make_celery worker --loglevel DEBUG
 https://yosuniiiii.com/flask-celery-rabbitmq-with-factoring-flask-create-app-make-celery-celery-scheduler-2-70c28b8b42b
 
 
+
+
+
+To Run tests:
+1. Ensure you are in your virtual environment and in the captstone_1 folder
+2. Run the command in terminal: python -m unittest website/test_auth.py   
+3. Ensure that website folder is specified to prevent import errors
+4. Change the name of of the test file based on requirements

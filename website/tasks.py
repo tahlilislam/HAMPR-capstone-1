@@ -14,27 +14,6 @@ import requests
 
 
 app = create_app()
-# user_timezone = session.get('timezone', 'UTC')
-
-
-
-# class RequestContextTask(Task):
-#     """Base class for tasks that run inside a Flask request context."""
-#     abstract = True
-
-#     def __call__(self, *args, **kwargs):
-#         with app.test_request_context():
-#             return super(RequestContextTask, self).__call__(*args, **kwargs)
-
-
-MICROSERVICE_URL = os.getenv('MICROSERVICE_URL', 'http://127.0.0.1:5000')
-
-
-# @shared_task(ignore_result=False)
-# def get_timezone():
-#     with app.app_context():
-#         user_timezone = session.get('timezone')
-#         return user_timezone
 
 
 @shared_task(ignore_result=False)
@@ -84,40 +63,17 @@ def send_mail(self):
         # with app.test_request_context():
 
         from website.models import User, Email
-        from website.timezone_store import user_timezones
-        from website import redis_client  # Adjust this import based on your project structure
-
-
-        # from website import cache
 
         users = User.query.all()
 
         print(f"ARRAY LENGTH: {len(users)}")
 
         for user in users:
-            print(user)
-            print(len(user.goals))
-            # user_timezone = user_timezones.get(user.id, 'UTC')  # Get timezone for each user
-            user_timezone = redis_client.get(f'timezone:{user.id}')
-            if user_timezone:
-                user_timezone = user_timezone.decode('utf-8')  # Decode bytes to string
-            # else:
-            #     user_timezone = 'UTC'  # Fallback to UTC if not set
+          
 
-
-            # # Call the API to get the timezone
-            # # Replace with your actual API URL
-            # response = requests.get('http://127.0.0.1:5000/get-timezone')
-            # if response.status_code == 200:
-            #     user_timezone = response.json().get('timezone', 'UTC')
-            #     print(f'USER TIMEZONE:{user_timezone}')
-            # # else:
-            # #     user_timezone = 'UTC'  # Default if API call fails
-
-            # # Get timezone from cache
-            # # user_timezone = cache.get('timezone')
-
-            # user_timezone = session.get('timezone', 'UTC')
+            ######## Using SAMPLE TIMEZONE to prevent ERRORS #################
+            user_timezone = "America/Los_Angeles"
+            ##################################
 
             print(f"User: {user.username}, Timezone: {user_timezone}")
 
@@ -132,17 +88,5 @@ def send_mail(self):
                     mail.send(msg)
                     print("RAN SENT MAIL")
 
-        # for user in users:
-        #     if user is current_user:
-        #         for goal in user.goals:
-        #             if goal.should_send_reminder(user_timezone):
-
-        #                 mail = Mail(app)
-        #                 msg = Message()
-        #                 msg = Message(subject='Reminder to complete your goal:',
-        #                               sender='noreply@mailtrap.io', recipients=['dummieuserexperience@gmail.com'])
-        #                 msg.body = "Hey Paul, sending you this email from my Flask app, lmk if it works"
-        #                 mail.send(msg)
-        #                 print("RAN SENT MAIL")
 
         return "Message sent or waiting for reminder window!"
