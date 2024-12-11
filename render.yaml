@@ -35,7 +35,7 @@ services:
         value: "/etc/secrets/service-acct-google.json"
       - key: PROJECT_ID
         value: "574846571370"
-      - key: PYTHON-VERSION
+      - key: PYTHON_VERSION
         value: "3.9.18"
   - type: web
     plan: free
