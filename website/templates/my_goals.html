@@ -1,0 +1,68 @@
+{% extends "base.html" %} {% block body_class %}my_goals{% endblock %} {%block
+title%} Set Goal {%endblock%} {% block content %} 
+{% if active_goal %}
+<h2>Active Goal: {{ active_goal.goal_text }}</h2>
+
+{% for day in goal_days %} {% set day_str = day.strftime('%Y-%m-%d') %}
+<div
+  class="goal-day {% if progress_entries[day_str] and progress_entries[day_str].missed %} missed{% endif %}"
+>
+  <input
+    hidden
+    class="custom-checkbox"
+    type="checkbox"
+    id="day-{{ loop.index }}"
+    data-goal-id="{{ active_goal.id }}"
+    data-date="{{ day_str }}"
+    onchange="updateGoalProgress('{{ active_goal.id }}', '{{ day_str }}', this)"
+    {%
+    if
+    progress_entries.get(day_str)
+    and
+    progress_entries[day_str].completed
+    %}
+    checked
+    {%
+    endif
+    %}
+  />
+
+  <label for="day-{{ loop.index }}" class="checkbox-label">  <i class="far fa-square unchecked"></i>
+    <i class="fas fa-check-square checked"></i> {{ day.strftime('%m-%d-%Y') }}</label>
+</div>
+{% endfor %}
+<!-- <button id="complete-goal" onclick="completeGoal()">Complete Goal</button> -->
+{% else %}
+<p>
+  No active goal.
+  <a href="{{ url_for('views.set_goal') }}">Create a new goal.</a>
+</p>
+{% endif %}
+
+<script>
+  // $( document ).ready(function() {
+  console.log("ready!");
+
+  async function updateGoalProgress(goalId, dateStr, checkbox) {
+    const url = `/update-goal-progress/${goalId}/${dateStr}`;
+    try {
+      const response = await axios.post(url, {
+        completed: checkbox.checked,
+      });
+      console.log("Goal progress updated", response.data);
+    } catch (e) {
+      console.error("Error updating the goal's progressL", e);
+    }
+  }
+
+  // Add click event listeners to checkboxes
+  $('input[type="checkbox"]').click(function () {
+    const goalId = $(this).data("goal-id");
+    const dateStr = $(this).data("date");
+    updateGoalProgress(goalId, dateStr, this);
+  });
+
+  // });
+</script>
+
+{%endblock%}

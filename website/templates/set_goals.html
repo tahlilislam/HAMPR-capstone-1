@@ -1,0 +1,52 @@
+{% extends "base.html" %} {% block body_class %}set_goal{% endblock %} {%block title
+%} Set Goal {%endblock%} {% block content %}
+<div class="row justify-content-md-center">
+  <div class="col-md-7 col-lg-5">
+    <h1 class="join-message">Set a goal</h1>
+    <form method="POST" id="goal_form">
+      {{ form.hidden_tag() }} {% for field in form if field.widget.input_type !=
+      'hidden' %}
+      <label for="{{ field.id }}">{{ field.label.text }}</label>
+      {{ field(class="form-control") }} {% for error in field.errors %}
+      <span class="text-danger">{{ error }}</span>
+      {% endfor %} {% endfor %}
+
+      <button class="btn btn-primary btn-lg btn-block">Set Goal</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const reminderInput = document.getElementById("reminder_time");
+    if (reminderInput) {
+      const now = new Date();
+      const hours = ("0" + now.getHours()).slice(-2); // Add leading 0 if necessary
+      const minutes = ("0" + now.getMinutes()).slice(-2);
+      reminderInput.value = hours + ":" + minutes; // Set the time in HH:MM format
+    }
+  });
+
+  const startDateInput = document.getElementById("start_date");
+  const endDateInput = document.getElementById("end_date");
+
+  startDateInput.addEventListener("change", function () {
+    const startDate = new Date(startDateInput.value);
+    const endDate = new Date(startDate.getTime() + 14 * 24 * 60 * 60 * 1000); // Add 14 days
+
+    // Extract the month, day, and year from endDate
+    const month = endDate.getMonth() + 1; // getMonth() returns 0-11
+    const day = endDate.getDate(); // getDate() returns 1-31
+    const year = endDate.getFullYear();
+
+    // Pad the month and day with leading zeros if necessary
+    const endDateString = `${year}-${month < 10 ? "0" + month : month}-${
+      day < 10 ? "0" + day : day
+    }`;
+
+    endDateInput.value = endDateString;
+    // const endDateString = endDate.toISOString().split("T")[0]; // Format as "YYYY-MM-DD"
+    // endDateInput.value = endDateString; // Update the end_date field
+  });
+</script>
+{%endblock%}

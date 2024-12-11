@@ -1,0 +1,133 @@
+{% extends "base.html" %} {% block body_class %}journaling{% endblock %} {%block
+title %} Home {%endblock%} {% block content %}
+
+<div class="row justify-content-md-center">
+  <div class="col-md-7 col-lg-5">
+    <h1 class="join-message">What's on your mind?</h1>
+    <form method="POST" id="journal_form">
+      {{ form.hidden_tag() }} {% for field in form if field.widget.input_type !=
+      'hidden' %} {% for error in field.errors %}
+      <span class="text-danger">{{ error }}</span>
+      {% endfor %}
+      <label for="{{ field.id }}">{{ field.label.text }}</label>
+      {{ field(class="form-control") }} {% endfor %}
+
+      <!-- Button to save the journal entry -->
+      <button type="submit" class="btn btn-primary btn-lg btn-block">
+        Save Journal
+      </button>
+      <!-- <a href="{{ url_for('classify.text_classify_results') }}" class="btn btn-primary btn-lg btn-block">Classify Journal</a> -->
+
+      <!-- Separate button to classify journal entry -->
+      <button id="classify-btn" class="btn btn-primary btn-lg btn-block">
+        Classify Journal
+      </button>
+    </form>
+  </div>
+</div>
+
+<div id="classification-results"></div>
+
+<h1>List of Journals</h1>
+<div class="table-responsive">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Title</th>
+        <th>Last Modified</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for journal in journals %}
+      <tr>
+        <td>{{ journal.title }}</td>
+        <td>{{ journal.local_modified_at(user_timezone) }}</td>
+        <td>
+          <a href="" class="btn btn-primary btn-sm">Edit</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  $(document).ready(function () {
+
+    $("#classify-btn").on("click", function (event) {
+      event.preventDefault(); // Prevent form submission
+
+      // Get content from the journal form or an input (modify as needed)
+      const content = $("#text_entry").val();
+
+      if (!content) {
+        alert("Please enter content to classify.");
+        return;
+      }
+
+      // Send the text to the backend for classification using Axios
+      axios
+        .post("/textclassify", {
+          content: content,
+        })
+        .then(function (response) {
+          const data = response.data;
+
+          if (data.error) {
+            alert(data.error);
+          } else {
+            // console.log("Predictions:", data.predictions);
+
+            // Accessing the first element in the predictions array
+            const prediction = data.predictions[0];
+
+            // Check if predictions are structured as expected
+            if (
+              !prediction ||
+              !Array.isArray(prediction.confidences) ||
+              !Array.isArray(prediction.displayNames)
+            ) {
+              console.error("Invalid predictions structure", prediction);
+              $("#classification-results").html(
+                `<p>Invalid prediction results.</p>`
+              );
+              return;
+            }
+
+            // Filter high-confidence predictions
+            let resultsHtml = "<h3>Classification Results</h3>";
+            let hasHighConfidence = false;
+
+            // Iterate over confidences and displayNames
+            prediction.confidences.forEach((confidence, index) => {
+              const displayName = prediction.displayNames[index];
+
+              // If confidence is greater than 0.6, add it to the results
+              const confidenceThreshold = 0.6;
+              if (confidence > confidenceThreshold) {
+                let confidencePercentage = (confidence * 100).toFixed(2);
+
+                resultsHtml += `<p>Our model predicts that your entry fits the category of: <b>${displayName} </b> with a confidence level of: <b> ${confidencePercentage}% </b> </p>`;
+                hasHighConfidence = true;
+              }
+            });
+
+            // If no high-confidence predictions are found
+            if (!hasHighConfidence) {
+              resultsHtml += `<p>No predictions with confidence greater than ${confidenceThreshold}</p>`;
+            }
+
+            // Display the classification result in the div
+            $("#classification-results").html(resultsHtml);
+          }
+        })
+
+        .catch(function (error) {
+          console.error("Error:", error);
+        });
+    });
+  });
+</script>
+
+{%endblock%}
