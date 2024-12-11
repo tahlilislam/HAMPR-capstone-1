@@ -45,7 +45,7 @@ services:
     region: ohio
     runtime: python
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "celery flower --app tasks --loglevel info"
+    startCommand: "celery flower --website tasks --loglevel info"
     autoDeploy: false
     envVars:
       - key: CELERY_BROKER_URL
