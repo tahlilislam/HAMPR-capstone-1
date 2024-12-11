@@ -1,5 +1,6 @@
 services:
   - type: worker
+    plan: free
     name: celery-worker
     region: ohio
     runtime: python
@@ -13,6 +14,7 @@ services:
           type: redis
           property: connectionString
   - type: web
+    plan: free
     name: app
     region: ohio
     runtime: python
@@ -26,6 +28,7 @@ services:
           type: redis
           property: connectionString
   - type: web
+    plan: free
     name: flower
     region: ohio
     plan: free
@@ -40,8 +43,8 @@ services:
           name: celery-redis
           property: connectionString
   - type: redis
+    plan: free
     name: celery-redis
     region: ohio
-    plan: starter # we choose a plan with persistence to ensure tasks are not lost upon restart
     maxmemoryPolicy: noeviction # recommended policy for queues
     ipAllowList: [] # only allow internal connections
