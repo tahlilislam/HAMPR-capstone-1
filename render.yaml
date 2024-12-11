@@ -27,6 +27,16 @@ services:
           name: celery-redis
           type: redis
           property: connectionString
+      - key: DATABASE_URL
+        sync: false
+      - key: ENDPOINT_ID
+        value: "2258816896893714432"
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: "/etc/secrets/service-acct-google.json"
+      - key: PROJECT_ID
+        value: "574846571370"
+      - key: PYTHON-VERSION
+        value: "3.9.18"
   - type: web
     plan: free
     name: flower
