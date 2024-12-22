@@ -76,6 +76,7 @@ def create_app():
         login_helper(app)
     #######
 
+# change for deployment celery-broker-url
     app.config.from_mapping(
         CELERY=dict(
             broker_url='amqp://guest:guest@127.0.0.1:5672//',
