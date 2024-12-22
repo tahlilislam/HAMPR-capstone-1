@@ -79,7 +79,8 @@ def create_app():
 # change for deployment celery-broker-url
     app.config.from_mapping(
         CELERY=dict(
-            broker_url='amqp://guest:guest@127.0.0.1:5672//',
+            # broker_url='amqp://guest:guest@127.0.0.1:5672//',
+            broker_url='redis://red-ctcejc2j1k6c73ff116g:6379',
             result_backend='rpc://guest:guest@127.0.0.1:5672//',
             task_ignore_result=True,
         ),
